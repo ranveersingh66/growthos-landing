@@ -1525,39 +1525,58 @@
   const supportsCustomCursor = window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 769px)').matches;
   if (cursorDot && supportsCustomCursor) {
     document.body.classList.add('custom-cursor');
-    let lastMoneyParticle = 0;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let moneyTimer = null;
+
+    const emitMoneyParticle = () => {
+      if (!lastPointerX && !lastPointerY) return;
+
+      const particle = document.createElement('span');
+      const drift = (Math.random() - 0.5) * 52;
+      const rise = 36 + Math.random() * 38;
+      const startX = lastPointerX + (Math.random() - 0.5) * 10;
+      const startY = lastPointerY + (Math.random() - 0.5) * 10;
+
+      particle.className = 'money-particle';
+      particle.textContent = Math.random() > 0.18 ? '$' : '$$';
+      particle.style.setProperty('--money-x', `${startX}px`);
+      particle.style.setProperty('--money-y', `${startY}px`);
+      particle.style.setProperty('--money-dx', `${drift}px`);
+      particle.style.setProperty('--money-rise', `${rise}px`);
+      particle.style.setProperty('--money-r', `${(Math.random() - 0.5) * 28}deg`);
+      particle.style.setProperty('--money-spin', `${(Math.random() - 0.5) * 70}deg`);
+      document.body.appendChild(particle);
+
+      particle.addEventListener('animationend', () => {
+        particle.remove();
+      }, { once: true });
+    };
+
+    const startMoneyParticles = () => {
+      if (moneyTimer) return;
+      emitMoneyParticle();
+      moneyTimer = window.setInterval(emitMoneyParticle, 105);
+    };
+
+    const stopMoneyParticles = () => {
+      if (!moneyTimer) return;
+      window.clearInterval(moneyTimer);
+      moneyTimer = null;
+    };
 
     window.addEventListener('mousemove', (event) => {
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
       cursorDot.style.left = `${event.clientX}px`;
       cursorDot.style.top = `${event.clientY}px`;
       cursorDot.classList.add('active');
-
-      if (event.target instanceof Element && event.target.closest('.pricing-card')) {
-        const now = performance.now();
-        if (now - lastMoneyParticle > 75) {
-          lastMoneyParticle = now;
-          const particle = document.createElement('span');
-          const drift = (Math.random() - 0.5) * 52;
-          const rise = 36 + Math.random() * 38;
-          const startX = event.clientX + (Math.random() - 0.5) * 10;
-          const startY = event.clientY + (Math.random() - 0.5) * 10;
-
-          particle.className = 'money-particle';
-          particle.textContent = Math.random() > 0.18 ? '$' : '$$';
-          particle.style.setProperty('--money-x', `${startX}px`);
-          particle.style.setProperty('--money-y', `${startY}px`);
-          particle.style.setProperty('--money-dx', `${drift}px`);
-          particle.style.setProperty('--money-rise', `${rise}px`);
-          particle.style.setProperty('--money-r', `${(Math.random() - 0.5) * 28}deg`);
-          particle.style.setProperty('--money-spin', `${(Math.random() - 0.5) * 70}deg`);
-          document.body.appendChild(particle);
-
-          particle.addEventListener('animationend', () => {
-            particle.remove();
-          }, { once: true });
-        }
-      }
     }, { passive: true });
+
+    document.querySelectorAll('.pricing-card').forEach((card) => {
+      card.addEventListener('mouseenter', startMoneyParticles);
+      card.addEventListener('mouseleave', stopMoneyParticles);
+    });
 
     document.addEventListener('mouseover', (event) => {
       const target = event.target;
@@ -1570,6 +1589,7 @@
 
     document.addEventListener('mouseleave', () => {
       cursorDot.classList.remove('active', 'hovering');
+      stopMoneyParticles();
     });
   }
 
